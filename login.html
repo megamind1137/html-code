@@ -1,0 +1,273 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="toast.css">
+    <link rel="stylesheet" href="loader.css">
+</head>
+
+<body>
+    <div id="toasts"></div>
+    <div class="loader" id="loader" style="display: none;"></div>
+    <div class="showPages" id="loginPage" style="display: block;">
+        <div>
+            <div><label id="_Username"></label></div>
+            <input onkeyup="addLable('_Username')" type="text" id="username" name="username" placeholder="Username"
+                required>
+        </div>
+        <div>
+            <div><label id="_Password"></label></div>
+            <input onkeyup="addLable('_Password')" type="password" id="password" name="password" placeholder="Password"
+                required>
+        </div>
+        <div>
+            <button onclick="loginApi()">Login</button>
+        </div>
+        <div>
+            <p>Not an existing user?
+                <button onclick="loginShowHide('signup')">Sign Up</button>
+            </p>
+        </div>
+    </div>
+
+    <!--Sign up -->
+    <div class="showPages" id="signup" style="display: none;">
+        <div>
+            <div><label id="l_Name"></label></div>
+            <input onkeyup="addLable('l_Name')" type="text" id="name" name="name" placeholder="Name" required>
+        </div>
+        <div>
+            <div><label id="l_Username"></label></div>
+            <input onkeyup="addLable('l_Username')" type="text" id="username1" name="username1" placeholder="Username"
+                required>
+        </div>
+        <div>
+            <div><label id="l_MobileNumber"></label></div>
+            <input onkeyup="addLable('l_MobileNumber')" type="text" id="mobile" name="mobile"
+                placeholder="Mobile Number" required>
+        </div>
+        <div>
+            <div><label id="l_Email"></label></div>
+            <input onkeyup="addLable('l_Email')" type="email" id="email" name="email" placeholder="Email" required>
+        </div>
+        <div>
+            <div><label id="l_Password"></label></div>
+            <input onkeyup="addLable('l_Password')" type="password" id="password1" name="password1"
+                placeholder="Password" required>
+        </div>
+        <div>
+            <div><label id="l_ConfirmPassword"></label></div>
+            <input onkeyup="addLable('l_ConfirmPassword')" type="password" id="rePassword" name="rePassword"
+                placeholder="Confirm Password" required>
+        </div>
+        <div>
+            <button onclick="signUpApi()">Sign Up</button>
+        </div>
+        <div>
+            <p>Already an existing user? <button onclick="loginShowHide('loginPage')">Login</button></p>
+        </div>
+    </div>
+
+    <!-- Verify otp-->
+    <div class="showPages" id="otpPage" style="display: none;">
+        <div>
+            <div><label id="_Otp"></label></div>
+            <input onkeyup="addLable('_Otp')" type="password" id="otp" name="otp" placeholder="Otp" required>
+        </div>
+        <div>
+            <button onclick="verifyOtpApi()">Verify Otp</button>
+        </div>
+        <div>
+            <p>Already verified account?
+                <button onclick="loginShowHide('loginPage')">Login</button>
+            </p>
+        </div>
+    </div>
+</body>
+
+<script>
+    function addLable(idValue) {
+        document.getElementById(idValue).innerHTML = idValue.split("_")[1];
+    }
+
+    function toast(message) {
+        var x = document.getElementById("snackbar");
+        x.className = "show";
+        x.innerText = message;
+        setTimeout(function () { x.className = x.className.replace("show", ""); }, 10000);
+    }
+
+    <!-- show and hide login and sign up page -->
+    function loginShowHide(idValue) {
+        var x = document.getElementById(idValue);
+        var y = document.getElementsByClassName("showPages");
+        for (var i = 0; i < y.length; i++) {
+            y[i].style.display = "none";
+        }
+        x.style.display = "block";
+    }
+
+
+    //    Login Api
+    function loginApi() {
+        localStorage.clear();
+
+        if (document.getElementById("username").value.trim() == "") {
+            toast("Username Can not be Empty", "info");
+            return null;
+        }
+        if (document.getElementById("password").value.trim() == "") {
+            toast("Password Can not be Empty", "info");
+            return null;
+        }
+
+        document.getElementById('loader').style.display = "block";
+
+        var myHeaders = new Headers();
+        myHeaders.append("accept", "*/*");
+        myHeaders.append("Content-Type", "application/json");
+
+        var raw = JSON.stringify({
+            "username": document.getElementById("username").value,
+            "password": document.getElementById("password").value
+        });
+
+        var requestOptions = {
+            method: 'POST',
+            headers: myHeaders,
+            body: raw,
+            redirect: 'follow'
+        };
+
+        fetch("http://localhost:8081/authenticate/auth", requestOptions)
+            .then(response => response.text())
+            .then(result => {
+                console.log(result)
+                result = JSON.parse(result);
+                if (result.status == 200) {
+                    localStorage.setItem('userId', result.data.userResponseDto.id);
+                    localStorage.setItem('token', result.data.token);
+                    // window.location.href = 'toast.html';
+                    toast(result.message, 'success');
+                    document.getElementById('loader').style.display = "none";
+                }
+                else {
+                    if (result.code == "CS21") {
+                        loginShowHide('otpPage');
+                        localStorage.setItem('userId', result.data.id);
+                        document.getElementById('loader').style.display = "none";
+                    }
+                    result.message.map((message) => {
+                        toast(message, 'error');
+                        document.getElementById('loader').style.display = "none";
+                    })
+                }
+            })
+            .catch(error => {
+                console.log('error', error),
+                    toast("Incorrect username & password", 'error')
+                document.getElementById('loader').style.display = "none";
+            });
+    }
+
+    // sign up API
+
+    function signUpApi() {
+
+        if (document.getElementById("name").value.trim() == "") {
+            toast("Name Can not be Empty", "info");
+            return null;
+        }
+        if (document.getElementById("username1").value.trim() == "") {
+            toast("Username Can not be Empty", "info");
+            return null;
+        }
+        if (document.getElementById("mobile").value.trim() == "") {
+            toast("Mobile Number Can not be Empty", "info");
+            return null;
+        }
+        if (document.getElementById("email").value.trim() == "") {
+            toast("Email Can not be Empty", "info");
+            return null;
+        }
+        if (document.getElementById("password1").value.trim() == "") {
+            toast("Password Can not be Empty", "info");
+            return null;
+        }
+        if (document.getElementById("rePassword").value.trim() == "") {
+            toast("Confirm Password Can not be Empty", "info");
+            return null;
+        }
+        if (document.getElementById("password1").value.trim() != document.getElementById("rePassword").value.trim()) {
+            toast("Password not match", "info");
+            return null;
+        }
+
+        document.getElementById('loader').style.display = "block";
+
+        var myHeaders = new Headers();
+        myHeaders.append("accept", "*/*");
+        myHeaders.append("Content-Type", "application/json");
+
+        var raw = JSON.stringify({
+            "name": document.getElementById("name").value,
+            "username": document.getElementById("username1").value,
+            "mobileNumber": document.getElementById("mobile").value,
+            "email": document.getElementById("email").value,
+            "password": document.getElementById("password1").value,
+            "rePassword": document.getElementById("rePassword").value
+        });
+
+        var requestOptions = {
+            method: 'POST',
+            headers: myHeaders,
+            body: raw,
+            redirect: 'follow'
+        };
+
+        fetch("https://cps-5aic.onrender.com/api/v1/user/save", requestOptions)
+            .then(response => response.text())
+            .then(result => {
+                console.log(result)
+                result = JSON.parse(result);
+                if (result.status == 201) {
+                    toast(result.message, 'success');
+                    loginShowHide('loginPage');
+                    document.getElementById('loader').style.display = "none";
+                }
+                else {
+                    result.message.map((message) => {
+                        toast(message, 'error');
+                        document.getElementById('loader').style.display = "none";
+                    })
+                }
+            })
+            .catch(error => {
+                console.log('error', error),
+                    toast("User Creation fail, please try after some time", 'error')
+                document.getElementById('loader').style.display = "none";
+            });
+    }
+
+    // Verify Otp api call
+    function verifyOtpApi() {
+        var userid = localStorage.getItem('userId');
+        if (userid.trim() == "") {
+            console.log("User id is not present");
+            return null;
+        }
+        if (document.getElementById("otp").value.trim() == "") {
+            toast("Please enter the otp", "info");
+            return null;
+        }
+
+    }
+
+</script>
+
+<script type="text/javascript" src="toast.js"></script>
+
+</html>
